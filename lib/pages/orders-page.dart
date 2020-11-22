@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:ZeloBusiness/models/Order.dart';
 import 'package:ZeloBusiness/models/OrderItem.dart';
+import 'package:ZeloBusiness/pages/order-details-page.dart';
 import 'package:ZeloBusiness/service/Network.dart';
 import 'package:ZeloBusiness/service/PushNotificationPlugin.dart';
 import 'package:ZeloBusiness/service/Storage.dart';
@@ -50,11 +51,8 @@ class _OrdersPageState extends State<OrdersPage> {
   }
 
   void _loadOrders() async {
-    var user = Storage.shared.getItem('user_data');
-    var userJson = json.decode(user);
-    var placeID = userJson['place_id'];
 
-    String url = Network.api + '/$placeID/orders/';
+    String url = Network.api + '/orders/';
     var response = await http.get(url);
 
     var ordersJson = json.decode(response.body).cast<Map<String, dynamic>>();
@@ -82,10 +80,12 @@ class _OrdersPageState extends State<OrdersPage> {
       }
     }
 
-    setState(() {
-      this.newOrders = newOrders;
-      this.completedOrders = completedOrders;
-    });
+    this.completedOrders = completedOrders;
+
+    for (var order in newOrders) {
+      newOrdersListKey.currentState.insertItem(0);
+      this.newOrders.add(order);
+    }
   }
 
   void _connectSocket() {
@@ -150,7 +150,11 @@ class _OrdersPageState extends State<OrdersPage> {
     return SlideTransition(
       child: InkWell(
         onTap: () {
-          showModalBottomSheet(context: context, isScrollControlled: true, builder: (BuildContext bc) => _orderFullInfoModal(order));
+          Navigator.of(context).push(
+              CupertinoPageRoute(
+                  builder: (context) => OrderDetailsPage(order: order)
+              )
+          );
         },
 
         child: Padding(
@@ -159,7 +163,7 @@ class _OrdersPageState extends State<OrdersPage> {
             children: <Widget>[
               Container(
                 width: 10,
-                height: 80,
+                height: 100,
                 margin: EdgeInsets.only(right: 10),
                 decoration: BoxDecoration(
                   color: (order.orderStatus == OrderStatus.NEW) ? Colors.blue : Colors.white,
@@ -174,11 +178,11 @@ class _OrdersPageState extends State<OrdersPage> {
                     Row(
                       children: <Widget>[
                         Text(
-                          'Клиент: ',
+                          'Откуда: ',
                           style: GoogleFonts.openSans(fontSize: 18),
                         ),
                         Text(
-                            order.clientName,
+                            order.place.name,
                             style: GoogleFonts.openSans(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold
@@ -191,12 +195,12 @@ class _OrdersPageState extends State<OrdersPage> {
                     Row(
                       children: <Widget>[
                         Text(
-                          'Заказ: ',
+                          'Куда: ',
                           style: GoogleFonts.openSans(fontSize: 18),
                         ),
                         Expanded (
                           child: Text(
-                              order.orderItemsString(),
+                              order.deliveryAddress.firstAddress,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.openSans(
@@ -209,9 +213,34 @@ class _OrdersPageState extends State<OrdersPage> {
                       ],
                     ),
 
-                    //total sum
                     Padding(
                       padding: EdgeInsets.only(top: 10),
+                      child: Row(
+                        children: <Widget>[
+                          Text(
+                            'Доставка: ',
+                            style: GoogleFonts.openSans(fontSize: 18),
+                          ),
+                          Expanded (
+                            child: Text(
+                                order.deliveryPrice.toString() + ' KZT',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.openSans(
+                                    fontSize: 20,
+                                    color: Colors.blue,
+                                    fontWeight: FontWeight.bold
+                                )
+                            ),
+                          )
+
+                        ],
+                      ),
+                    ),
+
+                    //total sum
+                    Padding(
+                      padding: EdgeInsets.only(top: 0),
                       child: Row(
                         children: <Widget>[
                           Text(
@@ -267,7 +296,7 @@ class _OrdersPageState extends State<OrdersPage> {
               itemCount: order.orderItems.length + 3,
               itemBuilder: (context, i) {
                 if (i == 0) {
-                  return _receiptHeader(order.clientName);
+                  return _receiptHeader(order.client.name);
                 }
 
                 if (i == order.orderItems.length + 1) {

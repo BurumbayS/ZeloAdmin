@@ -2,6 +2,8 @@
 import 'package:json_annotation/json_annotation.dart';
 import 'Address.dart';
 import 'OrderItem.dart';
+import 'Place.dart';
+import 'User.dart';
 
 part 'Order.g.dart';
 
@@ -16,8 +18,7 @@ enum OrderStatus {
 
 class Order {
   int id;
-  @JsonKey(name: 'place_id')
-  int placeID;
+  Place place;
   @JsonKey(name: 'status')
   OrderStatus orderStatus;
   @JsonKey(name: 'order_items')
@@ -26,8 +27,7 @@ class Order {
   int deliveryPrice;
   @JsonKey(name: 'client_id')
   int clientID;
-  @JsonKey(name: 'client_name')
-  String clientName;
+  User client;
   int price;
   @JsonKey(name: 'delivery_address')
   Address deliveryAddress;
