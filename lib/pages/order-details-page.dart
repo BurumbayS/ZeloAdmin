@@ -15,8 +15,9 @@ enum SectionType {
 class OrderDetailsPage extends StatefulWidget {
 
   final Order order;
+  final VoidCallback completeHandler;
 
-  const OrderDetailsPage({Key key, this.order}) : super(key: key);
+  const OrderDetailsPage({Key key, this.order, this.completeHandler}) : super(key: key);
 
   @override
   _OrderDetailsPageState createState() => _OrderDetailsPageState();
@@ -31,26 +32,76 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
         appBar: AppBar(
           title: Text('Детали заказа'),
         ),
-        body: ListView.builder(
-            itemCount: widget.order.orderItems.length + 4,
-            padding: const EdgeInsets.all(10.0),
-            itemBuilder: (context, i) {
-              if (i == 0) {
-                return _placeInfo(widget.order.place);
-              }
-              if (i == 1) {
-                return _deliveryInfo();
-              }
-              if (i == 2) {
-                return _contactsInfo();
-              }
+        body: Stack(
+          children: <Widget>[
+            ListView.builder(
+                itemCount: widget.order.orderItems.length + 5,
+                padding: const EdgeInsets.only(left: 10, right: 10, top: 10, bottom: 120),
+                itemBuilder: (context, i) {
+                  if (i == 0) {
+                    return _placeInfo(widget.order.place);
+                  }
+                  if (i == 1) {
+                    return _deliveryInfo();
+                  }
+                  if (i == 2) {
+                    return _comment();
+                  }
+                  if (i == 3) {
+                    return _contactsInfo();
+                  }
 
-              if (i == widget.order.orderItems.length + 3) {
-                return _total();
-              }
+                  if (i == widget.order.orderItems.length + 4) {
+                    return _total();
+                  }
 
-              return _orderItem(widget.order.orderItems[i - 3]);
-            }
+                  return _orderItem(widget.order.orderItems[i - 4]);
+                }
+            ),
+
+            Positioned(
+              bottom: 50,
+              left: 20,
+              right: 20,
+              child: Container(
+                height: 50,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(25.0),
+                    boxShadow: [BoxShadow(
+                      color: Colors.grey.withOpacity(0.5),
+                      spreadRadius: 1,
+                      blurRadius: 10,
+                      offset: Offset(0, 3),
+                    ),]
+                ),
+
+                child: FlatButton(
+                  color: (widget.order.orderStatus != OrderStatus.COMPLETED) ? Colors.blue[400] : Colors.grey[400],
+                  textColor: Colors.white,
+                  splashColor: (widget.order.orderStatus != OrderStatus.COMPLETED) ? Colors.blue[700] : Colors.grey[700],
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)
+                  ),
+
+                  child: Text(
+                      (widget.order.orderStatus != OrderStatus.COMPLETED) ? 'Завершить' : 'Завершен',
+                      style: GoogleFonts.openSans(
+                          fontSize: 22,
+                          decoration: TextDecoration.none,
+                          fontWeight: FontWeight.bold
+                      )
+                  ),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    if (widget.order.orderStatus != OrderStatus.COMPLETED) {
+                      widget.completeHandler();
+                    }
+                  },
+                ),
+              ),
+            ),
+          ],
         )
     );
   }
@@ -211,6 +262,40 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
               ),
             ),
           )
+        ],
+      ),
+    );
+  }
+
+  Widget _comment() {
+    return Padding(
+      padding: EdgeInsets.only(left: 10, right: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Padding(
+            padding: EdgeInsets.only(bottom: 10),
+            child: Text(
+              'Комментарий',
+              style: GoogleFonts.openSans(
+                  fontSize: 16,
+                  color: Colors.grey
+              ),
+            ),
+          ),
+
+          SelectableText(
+            widget.order.comment,
+            style: GoogleFonts.openSans(
+              fontSize: 18,
+            ),
+          ),
+
+          Divider(
+            color: Colors.grey,
+          ),
+
+
         ],
       ),
     );

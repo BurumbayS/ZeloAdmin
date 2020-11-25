@@ -154,7 +154,9 @@ class _OrdersPageState extends State<OrdersPage> {
 
           Navigator.of(context).push(
               CupertinoPageRoute(
-                  builder: (context) => OrderDetailsPage(order: order)
+                  builder: (context) => OrderDetailsPage(order: order, completeHandler: () {
+                    _completeOrder(order);
+                  },)
               )
           );
         },
