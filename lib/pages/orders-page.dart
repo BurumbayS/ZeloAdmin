@@ -72,10 +72,10 @@ class _OrdersPageState extends State<OrdersPage> {
     var completedOrders = new List<Order>();
 
     for (var order in ordersList) {
-      if (order.orderStatus == OrderStatus.NEW) {
+      if (order.orderStatus == OrderStatus.NEW || order.orderStatus == OrderStatus.DELIVERING || order.orderStatus == OrderStatus.COOKING) {
         newOrders.add(order);
       }
-      if (order.orderStatus == OrderStatus.DELIVERING) {
+      if (order.orderStatus == OrderStatus.COMPLETED) {
         completedOrders.add(order);
       }
     }
@@ -88,18 +88,18 @@ class _OrdersPageState extends State<OrdersPage> {
     }
   }
 
-  void _connectSocket() {
-    var token = Storage.shared.getItem("token");
-    final socket = WebsocketManager('wss://zelodostavka.me/ws/?token='+token);
-    socket.connect();
-    socket.onMessage((dynamic message) {
-//      _addNewOrder(message);
-    });
-    socket.onClose((dynamic message) {
-      print('disconnected');
-      socket.connect();
-    });
-  }
+//  void _connectSocket() {
+//    var token = Storage.shared.getItem("token");
+//    final socket = WebsocketManager('wss://zelodostavka.me/ws/?token='+token);
+//    socket.connect();
+//    socket.onMessage((dynamic message) {
+////      _addNewOrder(message);
+//    });
+//    socket.onClose((dynamic message) {
+//      print('disconnected');
+//      socket.connect();
+//    });
+//  }
 
   @override
   Widget build(BuildContext context) {
@@ -150,6 +150,8 @@ class _OrdersPageState extends State<OrdersPage> {
     return SlideTransition(
       child: InkWell(
         onTap: () {
+          _acceptOrder(order);
+
           Navigator.of(context).push(
               CupertinoPageRoute(
                   builder: (context) => OrderDetailsPage(order: order)
@@ -280,247 +282,21 @@ class _OrdersPageState extends State<OrdersPage> {
     );
   }
 
-  Widget _orderFullInfoModal(Order order) {
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.85,
-      padding: EdgeInsets.all(20),
-      decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.only(topRight: Radius.circular(20), topLeft: Radius.circular(20))
-      ),
-
-      child: Stack(
-        children: <Widget>[
-          ListView.builder(
-              physics: ClampingScrollPhysics(),
-              itemCount: order.orderItems.length + 3,
-              itemBuilder: (context, i) {
-                if (i == 0) {
-                  return _receiptHeader(order.client.name);
-                }
-
-                if (i == order.orderItems.length + 1) {
-                  return _receiptTotal(order.total());
-                }
-                
-                if (i == order.orderItems.length + 2) {
-                  return _receiptComment(order.comment);
-                }
-
-                return _receiptItem(order.orderItems[i-1]);
-              }
-          ),
-
-          Positioned(
-            bottom: 30,
-            left: 20,
-            right: 20,
-            child: Container(
-              height: 50,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(25.0),
-                  boxShadow: [BoxShadow(
-                    color: Colors.grey.withOpacity(0.5),
-                    spreadRadius: 1,
-                    blurRadius: 10,
-                    offset: Offset(0, 3),
-                  ),]
-              ),
-
-              child: FlatButton(
-                color: (order.orderStatus == OrderStatus.NEW) ? Colors.blue[400] : Colors.green[400],
-                textColor: Colors.white,
-                splashColor: (order.orderStatus == OrderStatus.NEW) ? Colors.blue[700] : Colors.green[700],
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)
-                ),
-
-                child: Text(
-                    (order.orderStatus == OrderStatus.NEW) ? 'Принять' : 'Готово',
-                    style: GoogleFonts.openSans(
-                        fontSize: 22,
-                        decoration: TextDecoration.none,
-                        fontWeight: FontWeight.bold
-                    )
-                ),
-                onPressed: () {
-                  Navigator.pop(context);
-                  (order.orderStatus == OrderStatus.NEW) ? _acceptOrder(order) : _completeOrder(order);
-                },
-              ),
-            ),
-          ),
-
-        ],
-      )
-    );
-  }
-
-  Widget _receiptHeader(String clientName) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Padding(
-          padding: EdgeInsets.only(bottom: 10),
-          child: Center(
-            child: Text(
-              'Заказ',
-              style: GoogleFonts.openSans(
-                  fontSize: 22
-              ),
-            ),
-          ),
-        ),
-
-        Row(
-          children: <Widget>[
-            Text(
-              'Клиент: ',
-              style: GoogleFonts.openSans(fontSize: 18),
-            ),
-            Text(
-                clientName,
-                style: GoogleFonts.openSans(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold
-                )
-            )
-          ],
-        ),
-
-        Divider()
-      ],
-    );
-  }
-
-  Widget _receiptItem(OrderItem item) {
-    return Padding(
-      padding: EdgeInsets.only(top: 5, bottom: 5),
-      child: Row(
-        children: <Widget>[
-          //order item
-          Container(
-            constraints: BoxConstraints(minWidth: 20, maxWidth: MediaQuery.of(context).size.width * 0.65),
-            child: Text(
-              item.name,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.openSans(
-                  fontSize: 15
-              ),
-            ),
-          ),
-
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration (
-                border: Border(bottom: BorderSide(width: 1.0, style: BorderStyle.solid, color: Colors.grey[300])),
-              ),
-            ),
-          ),
-
-          //item count
-          Text(
-            item.count.toString() + 'x ',
-            style: GoogleFonts.openSans(
-                fontSize: 15,
-                fontWeight: FontWeight.bold
-            ),
-          ),
-
-          //item price
-          Text(
-            item.totalPrice().toString() + ' KZT',
-            style: GoogleFonts.openSans(
-                fontSize: 15
-            ),
-          )
-        ],
-      ),
-    );
-  }
-
-  Widget _receiptTotal(int total) {
-    return Column (
-      children: <Widget>[
-        Padding(
-          padding: EdgeInsets.only(top: 20),
-          child: Row(
-            children: <Widget>[
-              Text(
-                'ИТОГО',
-                style: GoogleFonts.openSans(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold
-                ),
-              ),
-
-              Expanded(
-                child: Container(
-                  decoration: BoxDecoration (
-                    border: Border(bottom: BorderSide(width: 1.0, style: BorderStyle.solid, color: Colors.grey[300])),
-                  ),
-                ),
-              ),
-
-              Text(
-                total.toString() + ' KZT',
-                style: GoogleFonts.openSans(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold
-                ),
-              ),
-            ],
-          ),
-        )
-      ],
-    );
-  }
-
-  Widget _receiptComment(comment) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Divider(),
-
-        Padding(
-          padding: EdgeInsets.only(top: 10, bottom: 10),
-          child: Text(
-            'Комментарий',
-            style: GoogleFonts.openSans(
-              fontSize: 18,
-              fontWeight: FontWeight.bold
-            ),
-          ),
-        ),
-
-        Text(
-          comment,
-          style: GoogleFonts.openSans(
-            fontSize: 16
-          ),
-        )
-      ],
-    );
-  }
-
   void _acceptOrder(Order order) {
     FlutterRingtonePlayer.stop();
 
     setState(() {
-      order.orderStatus = OrderStatus.COOKING;
+      order.orderStatus = OrderStatus.DELIVERING;
     });
 
-    _updateOrderStatus(order.id, OrderStatus.COOKING);
   }
 
   void _completeOrder(Order order) {
     setState(() {
-      order.orderStatus = OrderStatus.DELIVERING;
+      order.orderStatus = OrderStatus.COMPLETED;
     });
 
-    _updateOrderStatus(order.id, OrderStatus.DELIVERING);
+    _updateOrderStatus(order.id, OrderStatus.COMPLETED);
 
     var index = newOrders.indexOf(order);
     newOrdersListKey.currentState.removeItem(
@@ -565,13 +341,6 @@ class _OrdersPageState extends State<OrdersPage> {
       volume: 10.0, // Android only - API >= 28
       asAlarm: false, // Android only - all APIs
     );
-//      FlutterRingtonePlayer.playNotification();
-//      FlutterRingtonePlayer.play(
-//        android: AndroidSounds.notification,
-//        ios: const IosSound(1023),
-//        looping: true,
-//        volume: 1.0,
-//      );
 
 //      var json = jsonDecode(snapshot);
 //      var messageJson = jsonDecode(json['message']);

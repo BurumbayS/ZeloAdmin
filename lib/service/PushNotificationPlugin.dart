@@ -50,6 +50,11 @@ class PushNotificationPlugin {
   }
 
   void registerPushToken(token, userID) async {
+    print(Network.shared.headers());
+    print(jsonEncode(<String, String>{
+      'push_token': token,
+      'user_id': userID
+    }));
     var response = await http.post(
       Network.api + "/push_token/",
       headers: Network.shared.headers(),
